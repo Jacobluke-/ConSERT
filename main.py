@@ -45,7 +45,7 @@ def parse_args():
     Argument settings.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_data", type=str, choices=["sst2","trec","mrpc","mr","cr","subj","mpqa","nli", "stssick", "stsb"], default="nli", help="Training data, on NLI or STS dataset")
+    parser.add_argument("--train_data", type=str, choices=["sst2","trec","mrpc","mr","cr","subj","mpqa","nli", "stssick", "stsb","fpb"], default="nli", help="Training data, on NLI or STS dataset")
     parser.add_argument("--no_pair", action="store_true", help="If provided, do not pair two training texts")
     parser.add_argument("--data_proportion", type=float, default=1.0, help="The proportion of training dataset")
     parser.add_argument("--do_upsampling", action="store_true", help="If provided, do upsampling to original size of training dataset")
@@ -220,6 +220,9 @@ def main(args):
         # Read data/downstream/STS and data/downstream/SICK and create the training dataset
         logging.info("Read STS and SICK train dataset")
         train_samples = load_datasets(datasets=["sts12", "sts13", "sts14", "sts15", "sts16", "stsb", "sickr"], need_label=False, use_all_unsupervised_texts=True, no_pair=args.no_pair)
+    elif args.train_data == "fpb":
+        logging.info("Read Financial PhraseBank training dataset")
+        train_samples = load_datasets(datasets=["fpb"], need_label=False, use_all_unsupervised_texts=True, no_pair=args.no_pair)
     elif args.train_data == "stsb":
         logging.info("Read STS Benchmark train dataset")
         train_samples = load_datasets(datasets=["stsb"], need_label=False, use_all_unsupervised_texts=True, no_pair=args.no_pair)

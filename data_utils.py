@@ -222,7 +222,8 @@ def load_datasets(datasets=None, need_label=False, use_all_unsupervised_texts=Tr
         "sts15": load_sts15,
         "sts16": load_sts16,
         "stsb": load_stsbenchmark,
-        "sickr": load_sickr
+        "sickr": load_sickr,
+        "fpb": load_phrasebank
     }
     datasets = datasets or ["sts12", "sts13", "sts14", "sts15", "sts16", "stsb", "sickr"]
     all_samples = []
