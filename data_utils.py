@@ -4,6 +4,8 @@ import random
 import logging
 import argparse
 import io
+import csv
+import pandas as pd
 
 from sentence_transformers import InputExample, LoggingHandler
 
@@ -110,6 +112,18 @@ def load_senteval_trec(need_label=False, use_all_unsupervised_texts=True, no_pai
             samples.append(InputExample(texts=[sample]))
     logging.info(f"Loaded examples from TREC dataset, total {len(samples)} examples")
     return samples
+
+def load_phrasebank(need_label=False, use_all_unsupervised_texts=True, no_pair=True):
+    data_path = f"./data/sentiment_data"
+    samples = []
+    for file in ["train.csv", "test.csv", "validation.csv"]:
+        input_file = os.path.join(data_path, file)
+        for ln in pd.read_csv(input_file, sep="\t"):
+            sample = ln['text']
+            samples.append(InputExample(texts=[sample]))
+    logging.info(f"Loaded examples from financial phrasebank dataset, total {len(samples)} examples")
+    return samples
+
 
 def load_senteval_mrpc(need_label=False, use_all_unsupervised_texts=True, no_pair=True):
     data_path = f"./data/downstream/MRPC"
