@@ -13,3 +13,4 @@ from .SequentialEvaluator import SequentialEvaluator
 from .TranslationEvaluator import TranslationEvaluator
 from .TripletEvaluator import TripletEvaluator
 from .SingleSentClassificationEvaluator import SingleSentClassificationEvaluator
+from .SingleSentRegressionEvaluator import SingleSentCRegressionEvaluator
