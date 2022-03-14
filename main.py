@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import math
 from sentence_transformers import models, losses
 from sentence_transformers import SentencesDataset, LoggingHandler, SentenceTransformer, util, InputExample
-from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, SimilarityFunction
+from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, SimilarityFunction, SingleSentClassificationEvaluator
 import logging
 from datetime import datetime
 import sys
@@ -268,17 +268,32 @@ def main(args):
         train_loss = losses.AdvCLSoftmaxLoss(model=model, sentence_embedding_dimension=model.get_sentence_embedding_dimension(), num_labels=len(label2int), concatenation_sent_max_square=args.concatenation_sent_max_square, normal_loss_stop_grad=args.normal_loss_stop_grad)
 
     # Read STSbenchmark dataset and use it as development set
-    logging.info("Read STSbenchmark dev dataset")
-    dev_samples = []
-    with gzip.open(sts_dataset_path, 'rt', encoding='utf8') as fIn:
-        reader = csv.DictReader(fIn, delimiter='\t', quoting=csv.QUOTE_NONE)
-        for row in reader:
-            if row['split'] == 'dev':
-                score = float(row['score']) / 5.0 #Normalize score to range 0 ... 1
-                dev_samples.append(InputExample(texts=[row['sentence1'], row['sentence2']], label=score))
+#     logging.info("Read STSbenchmark dev dataset")
+#     dev_samples = []
+#     with gzip.open(sts_dataset_path, 'rt', encoding='utf8') as fIn:
+#         reader = csv.DictReader(fIn, delimiter='\t', quoting=csv.QUOTE_NONE)
+#         for row in reader:
+#             if row['split'] == 'dev':
+#                 score = float(row['score']) / 5.0 #Normalize score to range 0 ... 1
+#                 dev_samples.append(InputExample(texts=[row['sentence1'], row['sentence2']], label=score))
+    
+    # Read Financial PhraseBank dev set and use it as development set
+    logging.info("Read Financial PhraseBank dev dataset")
+    dev_samples_fpb = []
+    fpb_data_path = f"./data/sentiment_data"
+    for file in ["train.csv"]:
+        input_file = os.path.join(fpb_data_path, file)
+        with open(input_file, newline='') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter='\t')
+            for row in reader:
+                dev_samples_fpb.append(InputExample(texts=row['text'], label=row['label']))
+
+                
     if args.chinese_dataset != "none":
         dev_samples = load_chinese_tsv_data(args.chinese_dataset, "dev", 2000)  # randomly sample 2000 examples for development
-    dev_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(dev_samples, batch_size=train_batch_size, name='sts-dev', main_similarity=SimilarityFunction.COSINE)
+        
+#     dev_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(dev_samples, batch_size=train_batch_size, name='sts-dev', main_similarity=SimilarityFunction.COSINE)
+    fpb_dev_evaluator = SingleSentClassificationEvaluator.from_input_examples(dev_samples_fpb, batch_size=train_batch_size, name='fpb')
 
     # Configure the training
     num_epochs = args.num_epochs
@@ -289,7 +304,7 @@ def main(args):
 
     # Train the model
     model.fit(train_objectives=[(train_dataloader, train_loss)],
-              evaluator=dev_evaluator,
+              evaluator=fpb_dev_evaluator,
               epochs=num_epochs,
               optimizer_params={'lr': args.learning_rate, 'eps': 1e-6, 'correct_bias': False},
               evaluation_steps=args.evaluation_steps,

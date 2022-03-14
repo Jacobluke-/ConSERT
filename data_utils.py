@@ -118,9 +118,10 @@ def load_phrasebank(need_label=False, use_all_unsupervised_texts=True, no_pair=T
     samples = []
     for file in ["train.csv", "test.csv", "validation.csv"]:
         input_file = os.path.join(data_path, file)
-        for ln in pd.read_csv(input_file, sep="\t"):
-            sample = ln['text']
-            samples.append(InputExample(texts=[sample]))
+        with open(input_file, newline='') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter='\t')
+            for row in reader:
+                samples.append(InputExample(texts=row['text']))
     logging.info(f"Loaded examples from financial phrasebank dataset, total {len(samples)} examples")
     return samples
 
