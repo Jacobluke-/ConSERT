@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import math
 from sentence_transformers import models, losses
 from sentence_transformers import SentencesDataset, LoggingHandler, SentenceTransformer, util, InputExample
-from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, SimilarityFunction, SingleSentClassificationEvaluator
+from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, SimilarityFunction, SingleSentClassificationEvaluator, SingleSentRegressionEvaluator
 import logging
 from datetime import datetime
 import sys
@@ -56,6 +56,7 @@ def parse_args():
     parser.add_argument("--model_save_path", type=str, default=None, help="Custom output dir")
     parser.add_argument("--tensorboard_log_dir", type=str, default=None, help="Custom tensorboard log dir")
     parser.add_argument("--force_del", action="store_true", help="Delete the existing save_path and do not report an error")
+    parser.add_argument("--eval_set", type=str, default="fiqa", choices=["phrasebank","fiqa"])
     
     parser.add_argument("--use_apex_amp", action="store_true", help="Use apex amp or not")
     parser.add_argument("--apex_amp_opt_level", type=str, default=None, help="The opt_level argument in apex amp")
@@ -278,22 +279,43 @@ def main(args):
 #                 dev_samples.append(InputExample(texts=[row['sentence1'], row['sentence2']], label=score))
     
     # Read Financial PhraseBank dev set and use it as development set
-    logging.info("Read Financial PhraseBank dev dataset")
-    dev_samples_fpb = []
-    fpb_data_path = f"./data/sentiment_data"
-    for file in ["train.csv"]:
-        input_file = os.path.join(fpb_data_path, file)
-        with open(input_file, newline='') as csvfile:
-            reader = csv.DictReader(csvfile, delimiter='\t')
-            for row in reader:
-                dev_samples_fpb.append(InputExample(texts=row['text'], label=row['label']))
+    if args.eval_set == "phrasebank":
+        logging.info("Read Financial PhraseBank dev dataset")
+        dev_samples = []
+        fpb_data_path = f"./data/sentiment_data"
+        for file in ["train.csv"]:
+            input_file = os.path.join(fpb_data_path, file)
+            with open(input_file, newline='') as csvfile:
+                reader = csv.DictReader(csvfile, delimiter='\t')
+                for row in reader:
+                    dev_samples.append(InputExample(texts=row['text'], label=row['label']))
+    elif args.eval_set == "fiqa":
+        logging.info("Read FiQA dev dataset")
+        dev_samples = []
+        fiqa_data_path = f"./data/sentiment_data/FiQA"
+        for file in ["FIQA_ABSA_task1_train/task1_headline_ABSA_train.json"]:
+            input_file = os.path.join(fiqa_data_path,file)
+            f = open(input_file)
+            data = json.load(f)
+            for j in data:
+                scores=[]
+                for i in range(len(data[j]['info'])):
+                    score = float(data[j]['info'][i]['sentiment_score'])
+                    scores.append(score)
+                sentiment_score = sum(scores)/len(scores)
+                dev_samples.append(InputExample(texts=data[j]['sentence'], label=sentiment_score))
+
+
 
                 
     if args.chinese_dataset != "none":
         dev_samples = load_chinese_tsv_data(args.chinese_dataset, "dev", 2000)  # randomly sample 2000 examples for development
         
 #     dev_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(dev_samples, batch_size=train_batch_size, name='sts-dev', main_similarity=SimilarityFunction.COSINE)
-    fpb_dev_evaluator = SingleSentClassificationEvaluator.from_input_examples(dev_samples_fpb, batch_size=train_batch_size, name='fpb')
+    if args.eval_set == "phrasebank":
+        dev_evaluator = SingleSentClassificationEvaluator.from_input_examples(dev_samples, batch_size=train_batch_size, name='fpb')
+    elif args.eval_set == "fiqa":
+        dev_evaluator = SingleSentRegressionEvaluator.from_input_examples(dev_samples, batch_size=train_batch_size, name='fiqa')
 
     # Configure the training
     num_epochs = args.num_epochs
@@ -304,7 +326,7 @@ def main(args):
 
     # Train the model
     model.fit(train_objectives=[(train_dataloader, train_loss)],
-              evaluator=fpb_dev_evaluator,
+              evaluator=dev_evaluator,
               epochs=num_epochs,
               optimizer_params={'lr': args.learning_rate, 'eps': 1e-6, 'correct_bias': False},
               evaluation_steps=args.evaluation_steps,
