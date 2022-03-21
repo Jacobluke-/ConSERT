@@ -15,7 +15,7 @@ from ..readers import InputExample
 
 # logger = logging.getLogger(__name__)
 
-class SingleSentCRegressionEvaluator(SentenceEvaluator):
+class SingleSentRegressionEvaluator(SentenceEvaluator):
     """
     # TODO: Add comments after
 
