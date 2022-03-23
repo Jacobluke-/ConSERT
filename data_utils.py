@@ -6,6 +6,7 @@ import argparse
 import io
 import csv
 import pandas as pd
+from nltk import sent_tokenize
 
 from sentence_transformers import InputExample, LoggingHandler
 
@@ -123,6 +124,45 @@ def load_phrasebank(need_label=False, use_all_unsupervised_texts=True, no_pair=T
             for row in reader:
                 samples.append(InputExample(texts=row['text']))
     logging.info(f"Loaded examples from financial phrasebank dataset, total {len(samples)} examples")
+    return samples
+
+def load_bloomberg(need_label=False, use_all_unsupervised_texts=True, no_pair=True):
+    data_path= f"./data/sentiment_data/bloomberg"
+    samples = []
+    dir = os.listdir(data_path)
+    random.seed(42)
+    random.shuffle(dir)
+    lines = 0
+    break_out_flag = False
+    
+    for folder in dir:
+        deeperdir = os.listdir(folder)
+        print()
+        random.shuffle(deeperdir)
+        for filename in deeperdir:
+            filepath = data_path + folder + '/' + filename
+            f = open(filepath, 'rt')
+            text = f.read()
+            f.close()
+            outputText = text.split("\n",7)[7]
+            sentences = sent_tokenize(outputText)
+            for i in range(2): senteces = sentences.pop()
+            print(len(sentences))
+            for i in range(len(sentences)):
+                sentences[i] = sentences[i].replace('\n',' ')
+                sentences[i] = sentences[i].replace('  ',' ')
+                sentences[i] = sentences[i].replace('       ','')
+                # print(sentences[i])
+                # print('------')
+                samples.append(InputExample(texts=sentences[i]))
+            lines = lines + len(sentences)
+            if lines > 30:
+                break_out_flag = True
+                break
+        if break_out_flag:
+            break
+
+    logging.info(f"Loaded examples from bloombert news dataset, total {len(samples)} examples")
     return samples
 
 
